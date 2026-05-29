@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Exactly — Compress images, make passport/visa photos, and convert JSON/YAML/XML/CSV, in your browser</title>
+<meta name="description" content="Free in-browser tools: compress images to an exact KB size, crop photos to official passport & visa specs with validation, and convert between JSON, YAML, XML and CSV. No upload, no watermark, no sign-up." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+<style>
+  :root{
+    --paper:#f5f1e8;--paper-2:#efe9dc;--ink:#1c1a17;--ink-soft:#4a463f;--line:#d8d0bf;
+    --accent:#b5421f;--accent-deep:#8c3014;--good:#2f6f4f;--bad:#a8551b;--card:#fffdf8;
+    --shadow:rgba(40,30,15,.12);--radius:18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:"Hanken Grotesk",system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--paper);
+    line-height:1.55;-webkit-font-smoothing:antialiased;min-height:100vh;
+    background-image:radial-gradient(circle at 18% -10%, rgba(181,66,31,.07), transparent 40%),radial-gradient(circle at 92% 8%, rgba(47,111,79,.06), transparent 35%);}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");}
+  .wrap{max-width:1020px;margin:0 auto;padding:0 22px;position:relative;z-index:1}
+
+  header{padding:28px 0 6px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .brand{display:flex;align-items:baseline;gap:10px}
+  .brand .mark{font-family:"Fraunces",serif;font-weight:600;font-size:1.7rem;letter-spacing:-.02em}
+  .brand .mark em{color:var(--accent);font-style:italic}
+  .brand .tag{font-size:.82rem;color:var(--ink-soft)}
+  .privacy-pill{display:inline-flex;align-items:center;gap:7px;font-size:.78rem;font-weight:600;color:var(--good);
+    background:rgba(47,111,79,.1);border:1px solid rgba(47,111,79,.25);padding:6px 12px;border-radius:999px}
+  .privacy-pill svg{width:14px;height:14px}
+
+  .hero{padding:26px 0 18px;max-width:760px}
+  .hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2rem,4.8vw,3.1rem);line-height:1.05;letter-spacing:-.025em;margin-bottom:14px}
+  .hero h1 em{font-style:italic;color:var(--accent)}
+  .hero p{font-size:1.05rem;color:var(--ink-soft);max-width:600px}
+
+  /* tabs */
+  .tabs{display:flex;gap:6px;margin:18px 0 0;border-bottom:1px solid var(--line)}
+  .tab{font:inherit;font-weight:600;font-size:.95rem;cursor:pointer;background:none;border:0;color:var(--ink-soft);
+    padding:12px 18px;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s ease}
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+  .tool{background:var(--card);border:1px solid var(--line);border-top:none;border-radius:0 0 var(--radius) var(--radius);
+    box-shadow:0 18px 50px -22px var(--shadow);overflow:hidden}
+  .pane{display:none}
+  .pane.active{display:block}
+
+  /* shared controls */
+  .controls{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;padding:20px 24px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#fffdf8,#fbf7ee)}
+  .field{display:flex;flex-direction:column;gap:7px}
+  .field label{font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft)}
+  .presets{display:flex;flex-wrap:wrap;gap:7px}
+  .preset{font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;background:var(--paper-2);border:1px solid var(--line);
+    color:var(--ink);padding:8px 13px;border-radius:10px;transition:all .15s ease}
+  .preset:hover{border-color:var(--accent);color:var(--accent)}
+  .preset.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .target-input{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .target-input input{font:inherit;font-weight:600;width:84px;border:0;padding:9px 12px;outline:none;background:transparent;color:var(--ink)}
+  .target-input .unit{padding:0 12px;font-size:.85rem;font-weight:700;color:var(--ink-soft);background:var(--paper-2);align-self:stretch;display:flex;align-items:center;border-left:1px solid var(--line)}
+  select.sel{font:inherit;font-weight:600;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);cursor:pointer;outline:none;min-width:230px}
+
+  .drop{padding:42px 24px;text-align:center;cursor:pointer;transition:background .18s ease}
+  .drop.drag{background:rgba(181,66,31,.06)}
+  .drop .ico{width:54px;height:54px;margin:0 auto 12px;border-radius:15px;display:grid;place-items:center;background:rgba(181,66,31,.1);color:var(--accent)}
+  .drop .ico svg{width:26px;height:26px}
+  .drop h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.18rem;margin-bottom:5px}
+  .drop p{font-size:.9rem;color:var(--ink-soft)}
+  .drop .browse{color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:3px}
+  .drop .fine{font-size:.77rem;color:var(--ink-soft);opacity:.8;margin-top:9px}
+
+  .btn{font:inherit;font-weight:600;font-size:.88rem;cursor:pointer;border-radius:10px;padding:10px 17px;border:1px solid var(--line);background:#fff;color:var(--ink);transition:all .15s ease}
+  .btn:hover{border-color:var(--ink-soft)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:var(--accent-deep)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+
+  /* compress results */
+  .results{padding:6px 16px 16px}
+  .res-head{display:flex;align-items:center;justify-content:space-between;padding:12px 8px 6px;flex-wrap:wrap;gap:10px}
+  .res-head .summary{font-size:.9rem;color:var(--ink-soft)} .res-head .summary b{color:var(--good)}
+  .res-actions{display:flex;gap:9px}
+  .item{display:grid;grid-template-columns:64px 1fr auto;gap:16px;align-items:center;padding:13px 10px;border-top:1px solid var(--line)}
+  .item .thumb{width:64px;height:64px;border-radius:12px;object-fit:cover;background:var(--paper-2);border:1px solid var(--line)}
+  .item .name{font-weight:600;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item .sizes{font-size:.82rem;color:var(--ink-soft);margin-top:3px}
+  .item .sizes .arrow{margin:0 7px;opacity:.5} .item .sizes .new{color:var(--good);font-weight:700}
+  .item .bar{height:6px;background:var(--paper-2);border-radius:99px;margin-top:8px;overflow:hidden;max-width:300px}
+  .item .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#e07a4f);width:0;transition:width .5s ease}
+  .item .right{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .item .pct{font-family:"Fraunces",serif;font-weight:600;font-size:1.15rem;color:var(--good)}
+  .item .dl{font-size:.82rem;font-weight:700;color:var(--accent);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+  .item.working .pct{color:var(--ink-soft);font-size:.85rem;font-family:"Hanken Grotesk"}
+  .spinner{width:15px;height:15px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* passport mode */
+  .pp{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  .pp .left{padding:22px 24px;border-right:1px solid var(--line)}
+  .pp .right{padding:22px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;background:#fbf7ee}
+  .spec{margin-top:16px;font-size:.88rem}
+  .spec table{width:100%;border-collapse:collapse}
+  .spec td{padding:6px 0;border-bottom:1px dashed var(--line);color:var(--ink-soft);vertical-align:top}
+  .spec td:first-child{font-weight:600;color:var(--ink);width:42%}
+  .spec td b{color:var(--ink)}
+  .disclaimer{margin-top:14px;font-size:.8rem;color:var(--bad);background:rgba(168,85,27,.08);border:1px solid rgba(168,85,27,.25);border-radius:10px;padding:10px 12px}
+  .disclaimer a{color:var(--accent)}
+
+  .stage{position:relative;width:100%;max-width:340px}
+  .stage canvas{display:block;width:100%;border-radius:12px;border:1px solid var(--line);background:#fff;touch-action:none;cursor:grab}
+  .stage canvas:active{cursor:grabbing}
+  .guide{position:absolute;inset:0;pointer-events:none}
+  .guide .oval{position:absolute;left:50%;transform:translateX(-50%);border:1.5px dashed rgba(181,66,31,.6);border-radius:50%}
+  .zoomrow{display:flex;align-items:center;gap:10px;width:100%;max-width:340px;font-size:.8rem;color:var(--ink-soft)}
+  .zoomrow input[type=range]{flex:1;accent-color:var(--accent)}
+  .pp-empty{display:grid;place-items:center;width:100%;max-width:340px;aspect-ratio:1;border:2px dashed var(--line);border-radius:12px;color:var(--ink-soft);font-size:.88rem;text-align:center;padding:20px;cursor:pointer}
+  .pp-actions{display:flex;gap:9px;width:100%;max-width:340px}
+  .pp-actions .btn{flex:1}
+
+  .validate{margin-top:6px;width:100%}
+  .vrow{display:flex;align-items:center;gap:9px;font-size:.88rem;padding:5px 0}
+  .vrow .badge{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;flex:none}
+  .vrow.ok .badge{background:rgba(47,111,79,.15);color:var(--good)}
+  .vrow.no .badge{background:rgba(168,85,27,.15);color:var(--bad)}
+  .vrow .badge svg{width:12px;height:12px}
+  .checklist{margin-top:10px;font-size:.82rem;color:var(--ink-soft)}
+  .checklist li{margin:4px 0 4px 18px}
+  .okbox{font-size:.9rem;font-weight:600;color:var(--good);background:rgba(47,111,79,.1);border:1px solid rgba(47,111,79,.25);border-radius:10px;padding:11px 13px;margin-bottom:10px}
+  .nobox{font-size:.9rem;font-weight:600;color:var(--bad);background:rgba(168,85,27,.08);border:1px solid rgba(168,85,27,.25);border-radius:10px;padding:11px 13px;margin-bottom:10px}
+  .resultimg{border-radius:10px;border:1px solid var(--line);max-width:200px}
+
+  .ad-slot{margin:32px auto;max-width:760px;min-height:90px;border:1px dashed var(--line);border-radius:12px;display:grid;place-items:center;color:var(--ink-soft);font-size:.78rem;opacity:.6}
+
+  /* converter */
+  .conv-bar{display:flex;align-items:center;gap:12px;padding:18px 24px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fffdf8,#fbf7ee);flex-wrap:wrap}
+  .conv-bar .field{flex-direction:column}
+  .swap{font:inherit;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--accent);width:38px;height:38px;border-radius:10px;display:grid;place-items:center;align-self:flex-end;transition:all .15s ease}
+  .swap:hover{border-color:var(--accent)}
+  .swap svg{width:18px;height:18px}
+  .conv-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  .conv-col{display:flex;flex-direction:column;min-width:0}
+  .conv-col:first-child{border-right:1px solid var(--line)}
+  .conv-colhead{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);border-bottom:1px solid var(--line)}
+  .conv-colhead .mini{display:flex;gap:7px}
+  .mini-btn{font:inherit;font-size:.76rem;font-weight:600;text-transform:none;letter-spacing:0;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink);padding:5px 10px;border-radius:8px}
+  .mini-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .mini-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  textarea.code{width:100%;min-height:300px;border:0;outline:none;resize:vertical;padding:16px 18px;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.84rem;line-height:1.5;background:transparent;color:var(--ink);white-space:pre;overflow:auto}
+  textarea.code::placeholder{color:var(--ink-soft);opacity:.6}
+  .conv-err{padding:10px 18px;font-size:.84rem;color:var(--bad);background:rgba(168,85,27,.08);border-top:1px solid rgba(168,85,27,.25)}
+  .conv-out{background:#fbf7ee}
+  @media(max-width:640px){ .conv-grid{grid-template-columns:1fr} .conv-col:first-child{border-right:none;border-bottom:1px solid var(--line)} }
+
+
+  .content{padding:54px 0 30px;max-width:760px}
+  .content h2{font-family:"Fraunces",serif;font-weight:600;font-size:1.6rem;letter-spacing:-.02em;margin:32px 0 12px}
+  .content h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.15rem;margin:22px 0 8px}
+  .content p,.content li{color:var(--ink-soft)} .content p{margin-bottom:12px} .content ul{margin:0 0 14px 20px}
+  .faq dt{font-weight:700;margin-top:16px} .faq dd{color:var(--ink-soft);margin:4px 0 0}
+  footer{padding:34px 0 50px;border-top:1px solid var(--line);margin-top:28px;color:var(--ink-soft);font-size:.85rem}
+
+  @media(max-width:720px){ .pp{grid-template-columns:1fr} .pp .left{border-right:none;border-bottom:1px solid var(--line)} }
+  @media(max-width:560px){ .item{grid-template-columns:48px 1fr} .item .thumb{width:48px;height:48px}
+    .item .right{grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:center} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand"><span class="mark">Exact<em>ly</em></span><span class="tag">image, photo &amp; data tools</span></div>
+    <span class="privacy-pill">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      100% in your browser — nothing is uploaded
+    </span>
+  </header>
+
+  <section class="hero">
+    <h1 id="heroTitle">Get your image to the <em>exact</em> size it needs to be.</h1>
+    <p id="heroSub">Compress any image to a precise KB limit — free, no upload, no watermark.</p>
+  </section>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="compress">Compress to size</button>
+    <button class="tab" data-tab="passport">Passport &amp; visa photo</button>
+    <button class="tab" data-tab="convert">Convert data files</button>
+  </div>
+
+  <div class="tool">
+
+    <!-- ============ COMPRESS PANE ============ -->
+    <div class="pane active" id="pane-compress">
+      <div class="controls">
+        <div class="field">
+          <label>Target size</label>
+          <div class="presets" id="presets">
+            <button class="preset" data-kb="20">20 KB</button>
+            <button class="preset active" data-kb="50">50 KB</button>
+            <button class="preset" data-kb="100">100 KB</button>
+            <button class="preset" data-kb="200">200 KB</button>
+            <button class="preset" data-kb="500">500 KB</button>
+            <button class="preset" data-kb="1024">1 MB</button>
+          </div>
+        </div>
+        <div class="field"><label>Custom</label>
+          <div class="target-input"><input id="targetKb" type="number" min="3" step="1" value="50" /><span class="unit">KB</span></div>
+        </div>
+        <div class="field"><label>Output format</label>
+          <select class="sel" id="fmt" style="min-width:auto">
+            <option value="image/jpeg">JPG (best for photos)</option>
+            <option value="image/webp">WebP (smallest)</option>
+            <option value="keep">Keep original type</option>
+          </select>
+        </div>
+      </div>
+      <div class="drop" id="drop">
+        <input id="file" type="file" accept="image/*" multiple hidden />
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+        <h3>Drop images here</h3>
+        <p>or <span class="browse">browse your files</span> — JPG, PNG, WebP · up to 12 at once</p>
+        <p class="fine">Everything runs locally. No file is ever sent to a server.</p>
+      </div>
+      <div class="results" id="results" style="display:none">
+        <div class="res-head"><div class="summary" id="summary"></div>
+          <div class="res-actions"><button class="btn" id="clearBtn">Clear</button><button class="btn primary" id="zipBtn">Download all (ZIP)</button></div>
+        </div>
+        <div id="list"></div>
+      </div>
+    </div>
+
+    <!-- ============ PASSPORT PANE ============ -->
+    <div class="pane" id="pane-passport">
+      <div class="pp">
+        <div class="left">
+          <div class="field"><label>Document type</label>
+            <select class="sel" id="specSel"></select>
+          </div>
+          <div class="spec" id="specPanel"></div>
+          <div class="disclaimer">
+            Requirements change and can vary by consulate or portal. This tool sets <b>size, crop, format and file size</b> — it does not replace your background, judge your expression, or guarantee acceptance. Always confirm the current rules on the official government site and use a properly lit, plain-background photo.
+          </div>
+        </div>
+        <div class="right">
+          <input id="ppfile" type="file" accept="image/*" hidden />
+          <div id="ppTopbar" style="display:none;width:100%;max-width:340px;justify-content:flex-end;gap:8px">
+            <button class="btn" id="ppReset" style="padding:7px 14px">Reset</button>
+          </div>
+          <div class="pp-empty" id="ppEmpty">
+            <div>
+              <div style="font-weight:700;color:var(--accent);margin-bottom:4px">Upload a photo</div>
+              We'll check it against the requirements first, then help you fix it if needed.
+            </div>
+          </div>
+          <div id="ppCheck" style="width:100%;max-width:340px"></div>
+          <div class="stage" id="ppStage" style="display:none">
+            <canvas id="ppCanvas"></canvas>
+            <div class="guide"><div class="oval" id="ppOval"></div></div>
+          </div>
+          <div class="zoomrow" id="ppZoomRow" style="display:none">
+            <span>Zoom</span><input type="range" id="ppZoom" min="100" max="300" value="100" /><button class="btn" id="ppReplace" style="padding:7px 12px">Replace</button>
+          </div>
+          <div class="pp-actions" id="ppActions" style="display:none">
+            <button class="btn primary" id="ppGenerate" style="flex:1">Generate corrected photo</button>
+          </div>
+          <div id="ppResult"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ CONVERT PANE ============ -->
+    <div class="pane" id="pane-convert">
+      <div class="conv-bar">
+        <div class="field"><label>Convert from</label>
+          <select class="sel" id="fromFmt" style="min-width:150px">
+            <option value="auto">Auto-detect</option>
+            <option value="json">JSON</option>
+            <option value="yaml">YAML</option>
+            <option value="xml">XML</option>
+            <option value="csv">CSV</option>
+          </select>
+        </div>
+        <button class="swap" id="swapFmt" title="Swap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        </button>
+        <div class="field"><label>Convert to</label>
+          <select class="sel" id="toFmt" style="min-width:150px">
+            <option value="yaml">YAML</option>
+            <option value="json">JSON</option>
+            <option value="xml">XML</option>
+            <option value="csv">CSV</option>
+          </select>
+        </div>
+        <input id="convFile" type="file" accept=".json,.yaml,.yml,.xml,.csv,.txt,application/json,text/yaml,text/xml,text/csv" hidden />
+      </div>
+      <div class="conv-grid">
+        <div class="conv-col">
+          <div class="conv-colhead"><span>Input</span>
+            <div class="mini"><button class="mini-btn" id="convUpload">Upload file</button><button class="mini-btn" id="convSample">Sample</button></div>
+          </div>
+          <textarea class="code" id="convIn" placeholder="Paste JSON, YAML, XML or CSV here — or upload a file. Conversion happens instantly, in your browser."></textarea>
+        </div>
+        <div class="conv-col conv-out">
+          <div class="conv-colhead"><span>Output</span>
+            <div class="mini"><button class="mini-btn" id="convCopy">Copy</button><button class="mini-btn primary" id="convDownload">Download</button></div>
+          </div>
+          <textarea class="code" id="convOut" placeholder="Converted output appears here." readonly></textarea>
+        </div>
+      </div>
+      <div class="conv-err" id="convErr" style="display:none"></div>
+    </div>
+
+  </div>
+
+  <!-- ad-slot: paste your AdSense unit inside this div -->
+  <div class="ad-slot">advertising slot — your AdSense unit goes here</div>
+
+  <article class="content">
+    <h2>Two tools, one promise: the exact size, with nothing uploaded</h2>
+    <p>Whether a portal demands a photo "under 50&nbsp;KB" or a consulate wants a precise 35&nbsp;×&nbsp;45&nbsp;mm passport photo at the right pixel size, the frustration is the same — vague tools that get you "close" and applications rejected for being a few kilobytes or pixels off. Both tools here aim for the exact target, run entirely in your browser, and add no watermark.</p>
+
+    <h2>Passport &amp; visa photo specifications</h2>
+    <p>Photo rules differ by country and by document, and they're updated from time to time. Below are the specs this tool currently supports, gathered from official and authoritative sources. Always double-check the current requirement on the official portal before you submit.</p>
+    <h3>United States (2&nbsp;×&nbsp;2 inch)</h3>
+    <p>US passport and visa photos are square: 2&nbsp;×&nbsp;2&nbsp;inches (51&nbsp;×&nbsp;51&nbsp;mm), a digital file of 600&nbsp;×&nbsp;600 to 1200&nbsp;×&nbsp;1200 pixels, on a plain white or off-white background. The head should fill roughly 50–69% of the height. Passport renewal uploads accept 54&nbsp;KB to 10&nbsp;MB, while visa (DS-160) and the Diversity Visa lottery require 240&nbsp;KB or smaller.</p>
+    <h3>Schengen / EU visa (35&nbsp;×&nbsp;45&nbsp;mm)</h3>
+    <p>The Schengen standard is 35&nbsp;×&nbsp;45&nbsp;mm (about 413&nbsp;×&nbsp;531&nbsp;pixels at 300&nbsp;DPI), head 32–36&nbsp;mm, often on a light grey background. Online submissions through VFS-style portals typically want a JPEG comfortably under a few megabytes; keeping it under ~500&nbsp;KB is safe.</p>
+    <h3>United Kingdom, India, Canada</h3>
+    <p>The UK uses 35&nbsp;×&nbsp;45&nbsp;mm, with digital uploads of at least 600&nbsp;×&nbsp;750 pixels and 50&nbsp;KB–10&nbsp;MB. India's e-Visa wants a square JPEG between 350&nbsp;×&nbsp;350 and 1000&nbsp;×&nbsp;1000 pixels, 10–300&nbsp;KB, white background, no glasses. Canada is unusual at 50&nbsp;×&nbsp;70&nbsp;mm for passports (printed photos must be taken by a commercial photographer), with online renewal accepting roughly 420&nbsp;×&nbsp;540 pixels and up.</p>
+
+    <h2>Convert data files: JSON, YAML, XML, CSV</h2>
+    <p>The third tool converts between common data and config formats — JSON to YAML, YAML to JSON, XML to JSON, JSON to CSV, and the combinations in between. It's built for developers and anyone wrangling config files: paste your text or upload a file, pick the target format, and the converted result appears instantly. Like everything here, it runs entirely in your browser, so even sensitive config never leaves your machine.</p>
+
+    <h2 id="faq">Frequently asked questions</h2>
+    <dl class="faq">
+      <dt>Does this guarantee my photo will be accepted?</dt>
+      <dd>No. It gets the size, crop, format and file size right, which are the most common rejection reasons — but background, lighting, expression and head position are up to you, and final acceptance is always the authority's decision.</dd>
+      <dt>Does it change my background to white?</dt>
+      <dd>No. It does not edit your background. Take the photo against a plain, evenly lit wall in the colour your document requires.</dd>
+      <dt>Are my files uploaded anywhere?</dt>
+      <dd>No. All image processing, photo cropping and data conversion happen locally in your browser.</dd>
+      <dt>Why is the file-size limit different for passport vs visa?</dt>
+      <dd>Different government portals set different limits for the same country. Pick the exact document type so the right limit is applied.</dd>
+      <dt>Which data formats can I convert between?</dt>
+      <dd>JSON, YAML, XML and CSV, in any direction. CSV works best with a list of flat records; deeply nested data converts most cleanly between JSON, YAML and XML.</dd>
+    </dl>
+  </article>
+
+  <footer><p>Free tools that get your photo to the exact size a form or consulate needs. Everything runs in your browser — your images stay with you. Always verify current requirements on the official government website.</p>
+    <p style="margin-top:12px"><a href="/about.html" style="color:var(--accent);margin-right:16px">About</a><a href="/privacy.html" style="color:var(--accent);margin-right:16px">Privacy Policy</a><a href="/terms.html" style="color:var(--accent)">Terms of Use</a></p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const $=s=>document.querySelector(s);
+
+  /* ---------------- tab switching ---------------- */
+  const HERO={
+    compress:["Get your image to the <em>exact</em> size it needs to be.","Compress any image to a precise KB limit — free, no upload, no watermark."],
+    passport:["Make a <em>passport</em> or <em>visa</em> photo that passes.","We check your photo against official specs first, then help you correct the size, crop and format — free, nothing uploaded."],
+    convert:["Convert data files <em>instantly</em>, in your browser.","JSON, YAML, XML and CSV in any direction. Paste or upload — nothing is sent to a server."]
+  };
+  const heroTitle=$("#heroTitle"),heroSub=$("#heroSub");
+  document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll(".pane").forEach(x=>x.classList.remove("active"));
+    t.classList.add("active");
+    $("#pane-"+t.dataset.tab).classList.add("active");
+    const h=HERO[t.dataset.tab];if(h){heroTitle.innerHTML=h[0];heroSub.textContent=h[1];}
+  }));
+
+  /* ====================================================================
+     SHARED: compress a canvas/image to a target byte size via quality search
+     ==================================================================== */
+  function encodeCanvas(canvas,mime,q){return new Promise(r=>canvas.toBlob(b=>r(b),mime,q));}
+  function drawTo(img,w,h){const c=document.createElement("canvas");c.width=Math.max(1,Math.round(w));c.height=Math.max(1,Math.round(h));
+    const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);return c;}
+
+  async function compressImageToTarget(img,targetBytes,mime){
+    let w=img.naturalWidth,h=img.naturalHeight;const ar=w/h;
+    for(let pass=0;pass<6;pass++){
+      let lo=0.05,hi=0.96,best=null;const c=drawTo(img,w,h);
+      for(let i=0;i<9;i++){const q=(lo+hi)/2;const b=await encodeCanvas(c,mime,q);if(b.size<=targetBytes){best=b;lo=q;}else hi=q;}
+      if(best)return{blob:best,w:Math.round(w),h:Math.round(h)};
+      const lowest=await encodeCanvas(c,mime,0.05);
+      if(pass===5)return{blob:lowest,w:Math.round(w),h:Math.round(h),over:lowest.size>targetBytes};
+      w*=0.85;h=w/ar;
+    }
+  }
+  async function compressCanvasToTarget(canvas,maxBytes,mime){
+    let lo=0.05,hi=0.97,best=null;
+    for(let i=0;i<10;i++){const q=(lo+hi)/2;const b=await encodeCanvas(canvas,mime,q);if(b.size<=maxBytes){best=b;lo=q;}else hi=q;}
+    if(best)return best;return await encodeCanvas(canvas,mime,0.05);
+  }
+  function fmtBytes(b){return b<1024?b+" B":b<1048576?(b/1024).toFixed(1)+" KB":(b/1048576).toFixed(2)+" MB";}
+  function loadImage(file){return new Promise((res,rej)=>{const url=URL.createObjectURL(file);const img=new Image();
+    img.onload=()=>res({img,url});img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error("bad"));};img.src=url;});}
+  function escapeHtml(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+  /* ====================================================================
+     TOOL 1 — COMPRESS TO SIZE
+     ==================================================================== */
+  const drop=$("#drop"),fileInput=$("#file"),results=$("#results"),list=$("#list"),summary=$("#summary"),
+        targetKbInput=$("#targetKb"),fmtSel=$("#fmt"),presetsEl=$("#presets");
+  let targetKb=50;const items=[];
+
+  presetsEl.addEventListener("click",e=>{const b=e.target.closest(".preset");if(!b)return;
+    document.querySelectorAll(".preset").forEach(p=>p.classList.remove("active"));b.classList.add("active");
+    targetKb=+b.dataset.kb;targetKbInput.value=targetKb;if(items.length)recompressAll();});
+  targetKbInput.addEventListener("input",()=>{const v=+targetKbInput.value;if(v>0)targetKb=v;
+    document.querySelectorAll(".preset").forEach(p=>p.classList.toggle("active",+p.dataset.kb===v));});
+  targetKbInput.addEventListener("change",()=>{if(items.length)recompressAll();});
+  fmtSel.addEventListener("change",()=>{if(items.length)recompressAll();});
+  drop.addEventListener("click",()=>fileInput.click());
+  fileInput.addEventListener("change",e=>handleFiles(e.target.files));
+  ["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("drag");}));
+  ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("drag");}));
+  drop.addEventListener("drop",e=>handleFiles(e.dataTransfer.files));
+  $("#clearBtn").addEventListener("click",()=>{items.forEach(it=>{if(it.url)URL.revokeObjectURL(it.url);if(it.srcUrl)URL.revokeObjectURL(it.srcUrl);});
+    items.length=0;list.innerHTML="";results.style.display="none";fileInput.value="";});
+  $("#zipBtn").addEventListener("click",downloadZip);
+
+  function handleFiles(fl){const incoming=[...fl].filter(f=>f.type.startsWith("image/")).slice(0,12-items.length);if(!incoming.length)return;
+    results.style.display="block";
+    incoming.forEach(f=>{const id="i"+Math.random().toString(36).slice(2);const it={id,name:f.name,origBytes:f.size,file:f,status:"queue"};
+      items.push(it);renderItem(it);processItem(it);});updateSummary();}
+  function mimeFor(file){let m=fmtSel.value;if(m==="keep")m=["image/png","image/webp","image/jpeg"].includes(file.type)?file.type:"image/jpeg";return m;}
+  async function processItem(it){it.status="working";renderItem(it);
+    try{const {img,url}=await loadImage(it.file);it.srcUrl=url;it.thumbImg=img;const m=mimeFor(it.file);
+      const r=await compressImageToTarget(img,Math.round(targetKb*1024),m);
+      if(it.url)URL.revokeObjectURL(it.url);it.blob=r.blob;it.url=URL.createObjectURL(r.blob);it.w=r.w;it.h=r.h;it.over=!!r.over;it.mime=m;it.status="done";
+    }catch(e){it.status="error";}renderItem(it);updateSummary();}
+  async function recompressAll(){for(const it of items){if(it.thumbImg){it.status="working";renderItem(it);
+    const m=mimeFor(it.file);const r=await compressImageToTarget(it.thumbImg,Math.round(targetKb*1024),m);
+    if(it.url)URL.revokeObjectURL(it.url);it.blob=r.blob;it.url=URL.createObjectURL(r.blob);it.w=r.w;it.h=r.h;it.over=!!r.over;it.mime=m;it.status="done";renderItem(it);}}updateSummary();}
+  function ext(m){return m==="image/webp"?"webp":m==="image/png"?"png":"jpg";}
+  function outName(it){return it.name.replace(/\.[^.]+$/,"")+"-"+targetKb+"kb."+ext(it.mime||"image/jpeg");}
+  function renderItem(it){let el=document.getElementById(it.id);if(!el){el=document.createElement("div");el.id=it.id;el.className="item";list.appendChild(el);}
+    el.className="item"+(it.status==="working"?" working":"");
+    const red=it.blob?Math.max(0,Math.round((1-it.blob.size/it.origBytes)*100)):0;const thumb=it.url||it.srcUrl||"";
+    el.innerHTML=`<img class="thumb" src="${thumb}" alt=""/><div class="meta"><div class="name">${escapeHtml(it.name)}</div>
+      <div class="sizes">${fmtBytes(it.origBytes)}${it.blob?`<span class="arrow">→</span><span class="new">${fmtBytes(it.blob.size)}</span> · ${it.w}×${it.h}`:""}${it.over?` · smallest possible`:""}</div>
+      <div class="bar"><i style="width:${red}%"></i></div></div>
+      <div class="right">${it.status==="working"?`<span class="pct"><span class="spinner"></span> finding size…</span>`:
+        it.status==="error"?`<span class="pct" style="color:var(--bad)">couldn't read file</span>`:
+        `<span class="pct">−${red}%</span><a class="dl" href="${it.url}" download="${outName(it)}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 3v12"/><path d="M7 12l5 5 5-5"/><path d="M5 21h14"/></svg>download</a>`}</div>`;}
+  function updateSummary(){const done=items.filter(i=>i.status==="done");const o=done.reduce((s,i)=>s+i.origBytes,0),n=done.reduce((s,i)=>s+i.blob.size,0);
+    summary.innerHTML=done.length?`${done.length} image${done.length>1?"s":""} ready · ${fmtBytes(o)} → ${fmtBytes(n)} · <b>saved ${Math.max(0,Math.round((1-n/o)*100))}%</b>`:(items.length?"Working…":"");
+    $("#zipBtn").disabled=done.length<1;}
+  async function downloadZip(){const done=items.filter(i=>i.status==="done");if(!done.length)return;
+    if(done.length===1){const a=document.createElement("a");a.href=done[0].url;a.download=outName(done[0]);a.click();return;}
+    const zip=new JSZip();done.forEach(it=>zip.file(outName(it),it.blob));const blob=await zip.generateAsync({type:"blob"});
+    const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="compressed-images.zip";a.click();setTimeout(()=>URL.revokeObjectURL(url),4000);}
+
+  /* ====================================================================
+     TOOL 2 — PASSPORT / VISA PHOTO
+     Specs verified against official / authoritative sources (2026).
+     px = recommended export pixels (within the allowed range)
+     fileKB = [min,max] accepted file size for the digital upload
+     headPct = approx % of frame height the head should fill (guide only)
+     ==================================================================== */
+  const SPECS=[
+    {id:"us-passport", label:"United States — Passport (online renewal)", mm:[51,51], px:[600,600], pxMin:[600,600], pxMax:[1200,1200], ratio:1, formats:["image/jpeg","image/png"], fileKB:[54,10240], headPct:60, bg:"plain white or off-white", glasses:"not allowed", notes:"Square 2×2 in. Head 50–69% of height.", src:"travel.state.gov"},
+    {id:"us-visa", label:"United States — Visa / DV Lottery (DS-160)", mm:[51,51], px:[600,600], pxMin:[600,600], pxMax:[1200,1200], ratio:1, formats:["image/jpeg"], fileKB:[1,240], headPct:60, bg:"plain white or off-white", glasses:"not allowed", notes:"Square 2×2 in, JPEG only, ≤240 KB.", src:"travel.state.gov"},
+    {id:"schengen", label:"Schengen / EU — Visa (35×45 mm)", mm:[35,45], px:[413,531], pxMin:[413,531], pxMax:[1000,1286], ratio:35/45, formats:["image/jpeg"], fileKB:[1,500], headPct:76, bg:"light grey or off-white", glasses:"avoid (often rejected)", notes:"Head 32–36 mm. Keep file under ~500 KB for online portals.", src:"EU Visa Code / VFS"},
+    {id:"uk-passport", label:"United Kingdom — Passport (online)", mm:[35,45], px:[600,750], pxMin:[600,750], pxMax:[2400,3000], ratio:35/45, formats:["image/jpeg"], fileKB:[50,10240], headPct:72, bg:"plain cream or light grey", glasses:"not allowed", notes:"Digital upload ≥ 600×750 px.", src:"gov.uk"},
+    {id:"india-evisa", label:"India — e-Visa (square)", mm:[51,51], px:[600,600], pxMin:[350,350], pxMax:[1000,1000], ratio:1, formats:["image/jpeg","image/png"], fileKB:[10,300], headPct:76, bg:"plain white", glasses:"not allowed", notes:"Square JPEG 350–1000 px, 10–300 KB, no glasses.", src:"indianvisaonline.gov.in"},
+    {id:"canada-passport", label:"Canada — Passport (online renewal)", mm:[50,70], px:[420,540], pxMin:[420,540], pxMax:[1200,1680], ratio:50/70, formats:["image/jpeg"], fileKB:[240,4096], headPct:50, bg:"plain white or light", glasses:"allowed if no glare", notes:"Unusual 50×70 mm size. Printed photos need a commercial photographer.", src:"canada.ca / IRCC"},
+    {id:"generic-3545", label:"Most countries — 35×45 mm (UK/EU/Australia type)", mm:[35,45], px:[413,531], pxMin:[413,531], pxMax:[1000,1286], ratio:35/45, formats:["image/jpeg","image/png"], fileKB:[1,500], headPct:74, bg:"plain light", glasses:"check rules", notes:"Common 35×45 mm format. Confirm exact pixel/KB limits for your portal.", src:"ICAO 9303 common standard"}
+  ];
+
+  const specSel=$("#specSel"),specPanel=$("#specPanel"),ppEmpty=$("#ppEmpty"),ppStage=$("#ppStage"),
+        cv=$("#ppCanvas"),ctx=cv.getContext("2d"),oval=$("#ppOval"),ppfile=$("#ppfile"),
+        ppZoomRow=$("#ppZoomRow"),ppZoom=$("#ppZoom"),ppActions=$("#ppActions"),ppResult=$("#ppResult"),
+        ppTopbar=$("#ppTopbar"),ppCheck=$("#ppCheck");
+  let curSpec=SPECS[0];
+  const st={img:null,file:null,scale:1,baseScale:1,offX:undefined,offY:undefined};
+
+  SPECS.forEach(s=>{const o=document.createElement("option");o.value=s.id;o.textContent=s.label;specSel.appendChild(o);});
+  specSel.addEventListener("change",()=>{curSpec=SPECS.find(s=>s.id===specSel.value);renderSpec();sizeCanvas();
+    if(st.img){hideEditor();ppResult.innerHTML="";const v=validateRaw(st.file,st.img,curSpec);showCheck(v);}});
+
+  function renderSpec(){const s=curSpec;
+    specPanel.innerHTML=`<table>
+      <tr><td>Print size</td><td><b>${s.mm[0]} × ${s.mm[1]} mm</b></td></tr>
+      <tr><td>Export pixels</td><td><b>${s.px[0]} × ${s.px[1]} px</b> (JPEG)</td></tr>
+      <tr><td>File size</td><td><b>${s.fileKB[0]<=1?"up to "+s.fileKB[1]+" KB":s.fileKB[0]+"–"+s.fileKB[1]+" KB"}</b></td></tr>
+      <tr><td>Background</td><td>${s.bg}</td></tr>
+      <tr><td>Glasses</td><td>${s.glasses}</td></tr>
+      <tr><td>Notes</td><td>${s.notes}</td></tr>
+      <tr><td>Source</td><td>${s.src}</td></tr>
+    </table>`;}
+
+  function sizeCanvas(){
+    const maxW=320,maxH=400;const ar=curSpec.px[0]/curSpec.px[1];
+    let w=maxW,h=w/ar;if(h>maxH){h=maxH;w=h*ar;}
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    cv.style.width=w+"px";cv.style.height=h+"px";cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);cv._cssW=w;cv._cssH=h;
+    // head guide oval
+    const oW=h*(curSpec.headPct/100)*0.78, oH=h*(curSpec.headPct/100);
+    oval.style.width=oW+"px";oval.style.height=oH+"px";oval.style.top=(h*0.12)+"px";
+  }
+
+  ppEmpty.addEventListener("click",()=>ppfile.click());
+  $("#ppReplace").addEventListener("click",()=>ppfile.click());
+  $("#ppReset").addEventListener("click",resetPP);
+  ["dragenter","dragover"].forEach(ev=>ppEmpty.addEventListener(ev,e=>{e.preventDefault();ppEmpty.style.background="rgba(181,66,31,.06)";}));
+  ["dragleave","drop"].forEach(ev=>ppEmpty.addEventListener(ev,e=>{e.preventDefault();ppEmpty.style.background="";}));
+  ppEmpty.addEventListener("drop",e=>{e.preventDefault();if(e.dataTransfer.files[0])loadPP(e.dataTransfer.files[0]);});
+  ppfile.addEventListener("change",e=>{if(e.target.files[0])loadPP(e.target.files[0]);});
+
+  // STEP 1: load + validate the uploaded photo first
+  async function loadPP(file){
+    try{
+      const {img}=await loadImage(file);
+      st.img=img;st.file=file;st.offX=undefined;st.offY=undefined;
+      ppEmpty.style.display="none";
+      ppTopbar.style.display="flex";
+      hideEditor();ppResult.innerHTML="";
+      const v=validateRaw(file,img,curSpec);
+      showCheck(v);
+    }catch(e){alert("Couldn't read that image. Please try a JPG or PNG.");}
+  }
+
+  // measurable checks on the raw uploaded file
+  function validateRaw(file,img,s){
+    const checks=[];
+    const ft=(file.type||"").replace("image/","").toUpperCase()||"unknown";
+    const fmtOk=s.formats.includes(file.type);
+    checks.push({ok:fmtOk,label:fmtOk?`Format ${ft} accepted`:`Format ${ft} — needs ${s.formats.map(f=>f.replace("image/","").toUpperCase()).join(" or ")}`});
+    const ar=img.naturalWidth/img.naturalHeight;
+    const arOk=Math.abs(ar-s.ratio)/s.ratio<0.02;
+    checks.push({ok:arOk,label:arOk?`Shape matches ${s.mm[0]}×${s.mm[1]} mm`:`Shape is ${img.naturalWidth}×${img.naturalHeight} — needs ${s.mm[0]}:${s.mm[1]} proportions`});
+    const dimOk=img.naturalWidth>=s.pxMin[0]&&img.naturalWidth<=s.pxMax[0]&&img.naturalHeight>=s.pxMin[1]&&img.naturalHeight<=s.pxMax[1];
+    checks.push({ok:dimOk,label:dimOk?`Pixel size ${img.naturalWidth}×${img.naturalHeight} within range`:`Pixel size ${img.naturalWidth}×${img.naturalHeight} — needs ${s.pxMin[0]}×${s.pxMin[1]} to ${s.pxMax[0]}×${s.pxMax[1]}`});
+    const fkb=file.size/1024;
+    const fOk=fkb>=s.fileKB[0]&&fkb<=s.fileKB[1];
+    const lim=s.fileKB[0]<=1?`≤ ${s.fileKB[1]} KB`:`${s.fileKB[0]}–${s.fileKB[1]} KB`;
+    checks.push({ok:fOk,label:fOk?`File size ${fmtBytes(file.size)} within limit`:`File size ${fmtBytes(file.size)} — needs ${lim}`});
+    return {checks,allOk:checks.every(c=>c.ok)};
+  }
+
+  function manualChecklist(s){return `<ul class="checklist">
+      <li>Background must be ${s.bg}, evenly lit, with no shadows.</li>
+      <li>Neutral expression, eyes open, facing forward. Glasses: ${s.glasses}.</li>
+      <li>Head centred and filling roughly the right proportion of the frame.</li>
+      <li>Always confirm the latest rules on the official ${s.src} page before submitting.</li>
+    </ul>`;}
+
+  // STEP 2: show the verdict; only open the editor if it fails
+  function showCheck(v){
+    const s=curSpec;
+    const rows=v.checks.map(c=>vrow(c.ok,c.label)).join("");
+    if(v.allOk){
+      const url=URL.createObjectURL(st.file);
+      const fname=s.id+"-photo."+((st.file.type||"image/jpeg").replace("image/",""));
+      ppCheck.innerHTML=`
+        <div class="okbox">Your photo already meets the measurable requirements for ${s.label.split("—")[0].trim()}. Check the points below by eye, then download.</div>
+        <div class="validate">${rows}</div>
+        <a class="btn primary" href="${url}" download="${fname}" style="text-decoration:none;text-align:center;display:block;margin-top:10px">Download photo</a>
+        <button class="btn" id="ppAdjust" style="width:100%;margin-top:8px">Adjust / re-crop anyway</button>
+        ${manualChecklist(s)}`;
+      const adj=document.getElementById("ppAdjust");if(adj)adj.addEventListener("click",showEditor);
+    } else {
+      ppCheck.innerHTML=`
+        <div class="nobox">Your photo needs adjusting. Fix it below — drag and zoom so your head sits in the guide, then generate a corrected version.</div>
+        <div class="validate">${rows}</div>`;
+      showEditor();
+    }
+  }
+
+  function showEditor(){
+    ppStage.style.display="block";ppZoomRow.style.display="flex";ppActions.style.display="flex";
+    ppZoom.value=100;st.offX=undefined;st.offY=undefined;sizeCanvas();fitImage();draw();
+  }
+  function hideEditor(){ppStage.style.display="none";ppZoomRow.style.display="none";ppActions.style.display="none";}
+
+  function resetPP(){
+    st.img=null;st.file=null;st.offX=undefined;st.offY=undefined;
+    ppCheck.innerHTML="";ppResult.innerHTML="";hideEditor();
+    ppTopbar.style.display="none";ppEmpty.style.display="grid";ppfile.value="";
+  }
+
+  function fitImage(){const w=cv._cssW,h=cv._cssH;st.baseScale=Math.max(w/st.img.naturalWidth,h/st.img.naturalHeight);
+    st.scale=st.baseScale*(ppZoom.value/100);centerClamp();}
+  function centerClamp(){const w=cv._cssW,h=cv._cssH;const iw=st.img.naturalWidth*st.scale,ih=st.img.naturalHeight*st.scale;
+    if(st.offX===undefined)st.offX=(w-iw)/2;if(st.offY===undefined)st.offY=(h-ih)/2;clamp();}
+  function clamp(){const w=cv._cssW,h=cv._cssH;const iw=st.img.naturalWidth*st.scale,ih=st.img.naturalHeight*st.scale;
+    st.offX=Math.min(0,Math.max(w-iw,st.offX));st.offY=Math.min(0,Math.max(h-ih,st.offY));}
+  function draw(){const w=cv._cssW,h=cv._cssH;ctx.clearRect(0,0,w,h);
+    ctx.drawImage(st.img,st.offX,st.offY,st.img.naturalWidth*st.scale,st.img.naturalHeight*st.scale);}
+
+  ppZoom.addEventListener("input",()=>{if(!st.img)return;const cx=cv._cssW/2,cy=cv._cssH/2;
+    const px=(cx-st.offX)/st.scale,py=(cy-st.offY)/st.scale;st.scale=st.baseScale*(ppZoom.value/100);
+    st.offX=cx-px*st.scale;st.offY=cy-py*st.scale;clamp();draw();});
+
+  let drag=null;
+  function pt(e){const r=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top};}
+  function down(e){if(!st.img)return;e.preventDefault();const p=pt(e);drag={x:p.x,y:p.y,ox:st.offX,oy:st.offY};}
+  function move(e){if(!drag)return;e.preventDefault();const p=pt(e);st.offX=drag.ox+(p.x-drag.x);st.offY=drag.oy+(p.y-drag.y);clamp();draw();}
+  function up(){drag=null;}
+  cv.addEventListener("mousedown",down);window.addEventListener("mousemove",move);window.addEventListener("mouseup",up);
+  cv.addEventListener("touchstart",down,{passive:false});cv.addEventListener("touchmove",move,{passive:false});cv.addEventListener("touchend",up);
+
+  $("#ppGenerate").addEventListener("click",generatePhoto);
+  async function generatePhoto(){
+    if(!st.img)return;
+    const s=curSpec;
+    const out=document.createElement("canvas");out.width=s.px[0];out.height=s.px[1];
+    const o=out.getContext("2d");o.fillStyle="#ffffff";o.fillRect(0,0,out.width,out.height);
+    // map full canvas frame -> source region of the original image
+    const srcX=(0-st.offX)/st.scale, srcY=(0-st.offY)/st.scale, srcW=cv._cssW/st.scale, srcH=cv._cssH/st.scale;
+    o.drawImage(st.img,srcX,srcY,srcW,srcH,0,0,out.width,out.height);
+    const maxBytes=s.fileKB[1]*1024;
+    const blob=await compressCanvasToTarget(out,maxBytes,"image/jpeg");
+    const url=URL.createObjectURL(blob);
+    const minOk=blob.size>=s.fileKB[0]*1024, maxOk=blob.size<=s.fileKB[1]*1024;
+    const fname=s.id+"-photo-"+s.px[0]+"x"+s.px[1]+".jpg";
+    ppResult.innerHTML=`
+      <div style="margin-top:8px;display:flex;flex-direction:column;align-items:center;gap:10px">
+        <img class="resultimg" src="${url}" alt="generated photo"/>
+        <div class="validate">
+          ${vrow(true,`Dimensions ${out.width}×${out.height} px`)}
+          ${vrow(true,`Format JPEG`)}
+          ${vrow(minOk&&maxOk,`File size ${fmtBytes(blob.size)} ${minOk&&maxOk?"(within limit)":"(outside "+s.fileKB[0]+"–"+s.fileKB[1]+" KB)"}`)}
+        </div>
+        <a class="btn primary" href="${url}" download="${fname}" style="text-decoration:none;text-align:center">Download corrected photo</a>
+        ${manualChecklist(s)}
+      </div>`;
+  }
+  function vrow(ok,text){return `<div class="vrow ${ok?'ok':'no'}"><span class="badge">${ok?
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`:
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`}</span><span>${text}</span></div>`;}
+
+  // init passport pane
+  renderSpec();sizeCanvas();
+  window.addEventListener("resize",()=>{if($("#pane-passport").classList.contains("active")){sizeCanvas();if(st.img){clamp();draw();}}});
+
+  /* ====================================================================
+     TOOL 3 — CONVERT DATA FILES  (JSON / YAML / XML / CSV, all in-browser)
+     ==================================================================== */
+  const fromFmt=$("#fromFmt"),toFmt=$("#toFmt"),convIn=$("#convIn"),convOut=$("#convOut"),
+        convErr=$("#convErr"),convFile=$("#convFile");
+  const EXT={json:"json",yaml:"yaml",xml:"xml",csv:"csv"};
+
+  function detectFmt(t){const s=t.trim();if(!s)return "json";
+    if(s[0]==="{"||s[0]==="[")return "json";
+    if(s[0]==="<")return "xml";
+    const fl=s.split("\n")[0];
+    if(fl.includes(",")&&!/:\s/.test(fl)&&!fl.includes("{"))return "csv";
+    return "yaml";}
+
+  /* ---- CSV ---- */
+  function parseCSV(text){text=text.replace(/\r\n?/g,"\n");const rows=[];let row=[],f="",q=false,i=0;
+    while(i<text.length){const c=text[i];
+      if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++;}else q=false;}else f+=c;}
+      else{if(c==='"')q=true;else if(c===","){row.push(f);f="";}else if(c==="\n"){row.push(f);rows.push(row);row=[];f="";}else f+=c;}
+      i++;}
+    if(f.length||row.length){row.push(f);rows.push(row);}return rows;}
+  function csvToObjects(text){const rows=parseCSV(text).filter(r=>!(r.length===1&&r[0]===""));if(!rows.length)return [];
+    const h=rows[0];return rows.slice(1).map(r=>{const o={};h.forEach((k,i)=>o[k]=r[i]!==undefined?r[i]:"");return o;});}
+  function objectsToCSV(val){let arr=val;if(!Array.isArray(arr)){if(val&&typeof val==="object")arr=[val];else throw new Error("CSV output needs a list of records (an array of objects).");}
+    if(!arr.length)return "";
+    const headers=[...new Set(arr.flatMap(o=>o&&typeof o==="object"?Object.keys(o):[]))];
+    const esc=v=>{v=(v===null||v===undefined)?"":typeof v==="object"?JSON.stringify(v):String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+    return [headers.join(","),...arr.map(o=>headers.map(h=>esc(o?o[h]:"")).join(","))].join("\n");}
+
+  /* ---- XML ---- */
+  function escapeXml(s){return s.replace(/[<>&'"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;","'":"&apos;",'"':"&quot;"}[c]));}
+  function xmlToObj(text){const doc=new DOMParser().parseFromString(text,"application/xml");
+    if(doc.querySelector("parsererror"))throw new Error("That doesn't look like valid XML.");
+    function walk(node){const o={};for(const a of node.attributes||[])o["@"+a.name]=a.value;
+      let txt="";const kids=[];
+      node.childNodes.forEach(ch=>{if(ch.nodeType===3)txt+=ch.nodeValue;else if(ch.nodeType===1)kids.push(ch);});
+      if(!kids.length&&!(node.attributes&&node.attributes.length))return txt.trim();
+      kids.forEach(ch=>{const v=walk(ch);if(o[ch.nodeName]!==undefined){if(!Array.isArray(o[ch.nodeName]))o[ch.nodeName]=[o[ch.nodeName]];o[ch.nodeName].push(v);}else o[ch.nodeName]=v;});
+      const t=txt.trim();if(t)o["#text"]=t;return o;}
+    const r=doc.documentElement;return {[r.nodeName]:walk(r)};}
+  function objToXml(obj){
+    function build(name,val,ind){const pad="  ".repeat(ind);
+      if(val===null||val===undefined)return pad+"<"+name+"/>";
+      if(typeof val!=="object")return pad+"<"+name+">"+escapeXml(String(val))+"</"+name+">";
+      if(Array.isArray(val))return val.map(v=>build(name,v,ind)).join("\n");
+      let attrs="",text="",kids=[];
+      for(const k in val){if(k[0]==="@")attrs+=" "+k.slice(1)+'="'+escapeXml(String(val[k]))+'"';else if(k==="#text")text=escapeXml(String(val[k]));else kids.push([k,val[k]]);}
+      if(!kids.length)return pad+"<"+name+attrs+">"+text+"</"+name+">";
+      return pad+"<"+name+attrs+">\n"+kids.map(([k,v])=>build(k,v,ind+1)).join("\n")+"\n"+pad+"</"+name+">";}
+    const keys=Object.keys(obj||{});
+    const head='<?xml version="1.0" encoding="UTF-8"?>\n';
+    if(keys.length===1&&typeof obj[keys[0]]==="object"&&!Array.isArray(obj[keys[0]]))return head+build(keys[0],obj[keys[0]],0);
+    return head+build("root",obj,0);}
+
+  function parseInput(text,fmt){
+    if(fmt==="json")return JSON.parse(text);
+    if(fmt==="yaml")return jsyaml.load(text);
+    if(fmt==="xml")return xmlToObj(text);
+    if(fmt==="csv")return csvToObjects(text);
+  }
+  function serialize(val,fmt){
+    if(fmt==="json")return JSON.stringify(val,null,2);
+    if(fmt==="yaml")return jsyaml.dump(val,{noRefs:true,lineWidth:-1});
+    if(fmt==="xml")return objToXml(val);
+    if(fmt==="csv")return objectsToCSV(val);
+  }
+
+  function runConvert(){
+    const text=convIn.value;convErr.style.display="none";
+    if(!text.trim()){convOut.value="";return;}
+    let from=fromFmt.value;if(from==="auto")from=detectFmt(text);
+    const to=toFmt.value;
+    try{
+      const val=parseInput(text,from);
+      convOut.value=serialize(val,to);
+    }catch(e){
+      convOut.value="";
+      convErr.style.display="block";
+      convErr.textContent=(from!==fromFmt.value?"Read as "+from.toUpperCase()+". ":"")+"Couldn't convert: "+(e.message||e);
+    }
+  }
+
+  convIn.addEventListener("input",runConvert);
+  fromFmt.addEventListener("change",runConvert);
+  toFmt.addEventListener("change",runConvert);
+  $("#swapFmt").addEventListener("click",()=>{
+    let f=fromFmt.value;if(f==="auto")f=detectFmt(convIn.value);
+    const t=toFmt.value;
+    fromFmt.value=t;toFmt.value=f;
+    convIn.value=convOut.value;runConvert();
+  });
+  $("#convUpload").addEventListener("click",()=>convFile.click());
+  convFile.addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();r.onload=()=>{convIn.value=r.result;
+      const ext=(f.name.split(".").pop()||"").toLowerCase();const map={json:"json",yaml:"yaml",yml:"yaml",xml:"xml",csv:"csv"};
+      if(map[ext])fromFmt.value=map[ext];runConvert();};r.readAsText(f);});
+  $("#convCopy").addEventListener("click",()=>{if(!convOut.value)return;navigator.clipboard&&navigator.clipboard.writeText(convOut.value);
+    const b=$("#convCopy");const o=b.textContent;b.textContent="Copied!";setTimeout(()=>b.textContent=o,1200);});
+  $("#convDownload").addEventListener("click",()=>{if(!convOut.value)return;
+    const blob=new Blob([convOut.value],{type:"text/plain"});const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");a.href=url;a.download="converted."+(EXT[toFmt.value]||"txt");a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);});
+  $("#convSample").addEventListener("click",()=>{
+    fromFmt.value="json";toFmt.value="yaml";
+    convIn.value=JSON.stringify({service:"payments",version:2,enabled:true,replicas:3,
+      ports:[8080,8443],owner:{team:"core",email:"core@example.com"},tags:["api","prod"]},null,2);
+    runConvert();});
+})();
+</script>
+</body>
+</html>
