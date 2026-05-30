@@ -1,0 +1,17 @@
+{
+  "name": "Exactly — image, photo & data tools",
+  "short_name": "Exactly",
+  "description": "Free in-browser tools: compress images to an exact KB size, make passport & visa photos, and convert JSON/YAML/XML/CSV. Nothing is uploaded.",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f1e8",
+  "theme_color": "#b5421f",
+  "categories": ["utilities", "productivity", "photo"],
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

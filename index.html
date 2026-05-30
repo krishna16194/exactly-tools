@@ -5,6 +5,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Exactly — Compress images, make passport/visa photos, and convert JSON/YAML/XML/CSV, in your browser</title>
 <meta name="description" content="Free in-browser tools: compress images to an exact KB size, crop photos to official passport & visa specs with validation, and convert between JSON, YAML, XML and CSV. No upload, no watermark, no sign-up." />
+<link rel="canonical" href="https://exactly-tools.workers.dev/" />
+<meta name="author" content="Exactly" />
+<meta name="keywords" content="compress image to size, image to 50 KB, passport photo maker, visa photo, JSON to YAML, YAML to JSON, XML to JSON, CSV converter, in-browser, no upload" />
+
+<!-- Favicons & app icons -->
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="manifest" href="/site.webmanifest" />
+<meta name="theme-color" content="#f5f1e8" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#1a1714" media="(prefers-color-scheme: dark)" />
+<meta name="color-scheme" content="light dark" />
+<meta name="application-name" content="Exactly" />
+<meta name="apple-mobile-web-app-title" content="Exactly" />
+
+<!-- Open Graph / social -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Exactly" />
+<meta property="og:title" content="Exactly — image, photo & data tools, all in your browser" />
+<meta property="og:description" content="Compress images to an exact KB size, make passport & visa photos that pass official specs, and convert JSON/YAML/XML/CSV. Free, no upload, no watermark." />
+<meta property="og:url" content="https://exactly-tools.workers.dev/" />
+<meta property="og:image" content="https://exactly-tools.workers.dev/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Exactly — compress images, passport photos, convert data, in your browser." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Exactly — image, photo & data tools, all in your browser" />
+<meta name="twitter:description" content="Compress images to an exact KB size, make passport & visa photos, and convert JSON/YAML/XML/CSV. Free, no upload, no watermark." />
+<meta name="twitter:image" content="https://exactly-tools.workers.dev/og-image.png" />
+
+<!-- Set theme before paint to avoid a flash of the wrong colour -->
+<script>(function(){try{var t=localStorage.getItem("exactly-theme");if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -15,7 +48,25 @@
     --paper:#f5f1e8;--paper-2:#efe9dc;--ink:#1c1a17;--ink-soft:#4a463f;--line:#d8d0bf;
     --accent:#b5421f;--accent-deep:#8c3014;--good:#2f6f4f;--bad:#a8551b;--card:#fffdf8;
     --shadow:rgba(40,30,15,.12);--radius:18px;
+    --field:#ffffff;--field-2:#fbf7ee;--field-grad:linear-gradient(180deg,#fffdf8,#fbf7ee);
   }
+  [data-theme="dark"]{
+    --paper:#16130f;--paper-2:#221d17;--ink:#f1eadd;--ink-soft:#b6ab98;--line:#3a322a;
+    --accent:#e0673f;--accent-deep:#c4502a;--good:#5fae84;--bad:#d6924c;--card:#211c16;
+    --shadow:rgba(0,0,0,.55);
+    --field:#2a241d;--field-2:#1d1813;--field-grad:linear-gradient(180deg,#262019,#1d1813);
+  }
+  [data-theme="dark"] body{
+    background-image:radial-gradient(circle at 18% -10%, rgba(224,103,63,.10), transparent 40%),radial-gradient(circle at 92% 8%, rgba(95,174,132,.08), transparent 35%);}
+  [data-theme="dark"] body::before{opacity:.25}
+  /* re-map the hardcoded light surfaces to theme variables */
+  [data-theme="dark"] .controls,[data-theme="dark"] .conv-bar{background:var(--field-grad)}
+  [data-theme="dark"] .conv-out,[data-theme="dark"] .pp .right{background:var(--field-2)}
+  [data-theme="dark"] .target-input,[data-theme="dark"] .target-input input,
+  [data-theme="dark"] select.sel,[data-theme="dark"] .btn,
+  [data-theme="dark"] .mini-btn,[data-theme="dark"] .swap{background:var(--field);color:var(--ink)}
+  [data-theme="dark"] .btn.primary,[data-theme="dark"] .mini-btn.primary{background:var(--accent);color:#1a1410;border-color:var(--accent)}
+  [data-theme="dark"] .target-input .unit{background:var(--paper-2)}
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
   body{font-family:"Hanken Grotesk",system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--paper);
@@ -33,6 +84,23 @@
   .privacy-pill{display:inline-flex;align-items:center;gap:7px;font-size:.78rem;font-weight:600;color:var(--good);
     background:rgba(47,111,79,.1);border:1px solid rgba(47,111,79,.25);padding:6px 12px;border-radius:999px}
   .privacy-pill svg{width:14px;height:14px}
+  .head-right{display:flex;align-items:center;gap:12px}
+  .theme-toggle{font:inherit;cursor:pointer;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);
+    background:var(--card);color:var(--ink-soft);display:grid;place-items:center;transition:all .15s ease;flex:none}
+  .theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+  .theme-toggle svg{width:18px;height:18px}
+  .theme-toggle .moon{display:none}
+  [data-theme="dark"] .theme-toggle .sun{display:none}
+  [data-theme="dark"] .theme-toggle .moon{display:block}
+
+  /* toast notifications */
+  .toasts{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:50;display:flex;flex-direction:column;gap:9px;align-items:center;pointer-events:none}
+  .toast{background:var(--ink);color:var(--paper);font-size:.86rem;font-weight:600;padding:11px 16px;border-radius:12px;
+    box-shadow:0 12px 30px -10px var(--shadow);display:flex;align-items:center;gap:9px;opacity:0;transform:translateY(10px);
+    transition:opacity .2s ease,transform .2s ease;max-width:90vw}
+  .toast.show{opacity:1;transform:translateY(0)}
+  .toast svg{width:16px;height:16px;flex:none}
+  .toast.good svg{color:#7fd0a5}.toast.bad svg{color:#f0a564}
 
   .hero{padding:26px 0 18px;max-width:760px}
   .hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2rem,4.8vw,3.1rem);line-height:1.05;letter-spacing:-.025em;margin-bottom:14px}
@@ -169,16 +237,64 @@
   @media(max-width:560px){ .item{grid-template-columns:48px 1fr} .item .thumb{width:48px;height:48px}
     .item .right{grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:center} }
 </style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "Exactly",
+      "url": "https://exactly-tools.workers.dev/",
+      "description": "Free in-browser tools: compress images to an exact KB size, make passport & visa photos to official specs, and convert between JSON, YAML, XML and CSV. Nothing is uploaded.",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Any (web browser)",
+      "browserRequirements": "Requires JavaScript and a modern browser",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "featureList": [
+        "Compress images to an exact KB target",
+        "Passport and visa photo cropping with spec validation",
+        "Convert JSON, YAML, XML and CSV in any direction"
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Does this guarantee my photo will be accepted?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. It gets the size, crop, format and file size right, which are the most common rejection reasons, but background, lighting, expression and head position are up to you, and final acceptance is always the authority's decision." }
+        },
+        {
+          "@type": "Question",
+          "name": "Are my files uploaded anywhere?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. All image processing, photo cropping and data conversion happen locally in your browser." }
+        },
+        {
+          "@type": "Question",
+          "name": "Which data formats can I convert between?",
+          "acceptedAnswer": { "@type": "Answer", "text": "JSON, YAML, XML and CSV, in any direction. CSV works best with a list of flat records; deeply nested data converts most cleanly between JSON, YAML and XML." }
+        }
+      ]
+    }
+  ]
+}
+</script>
 </head>
 <body>
 <div class="wrap">
 
   <header>
     <div class="brand"><span class="mark">Exact<em>ly</em></span><span class="tag">image, photo &amp; data tools</span></div>
-    <span class="privacy-pill">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      100% in your browser — nothing is uploaded
-    </span>
+    <div class="head-right">
+      <span class="privacy-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        100% in your browser — nothing is uploaded
+      </span>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </div>
   </header>
 
   <section class="hero">
@@ -186,10 +302,10 @@
     <p id="heroSub">Compress any image to a precise KB limit — free, no upload, no watermark.</p>
   </section>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="compress">Compress to size</button>
-    <button class="tab" data-tab="passport">Passport &amp; visa photo</button>
-    <button class="tab" data-tab="convert">Convert data files</button>
+  <div class="tabs" role="tablist" aria-label="Tools">
+    <button class="tab active" data-tab="compress" role="tab" aria-selected="true" aria-controls="pane-compress">Compress to size</button>
+    <button class="tab" data-tab="passport" role="tab" aria-selected="false" aria-controls="pane-passport">Passport &amp; visa photo</button>
+    <button class="tab" data-tab="convert" role="tab" aria-selected="false" aria-controls="pane-convert">Convert data files</button>
   </div>
 
   <div class="tool">
@@ -356,10 +472,31 @@
   </footer>
 </div>
 
+<div class="toasts" id="toasts" aria-live="polite" aria-atomic="true"></div>
+
 <script>
 (function(){
   "use strict";
   const $=s=>document.querySelector(s);
+
+  /* ---------------- toast notifications ---------------- */
+  const toastWrap=$("#toasts");
+  const TICONS={good:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="20 6 9 17 4 12"/></svg>',
+    bad:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16.5" x2="12" y2="16.5"/></svg>'};
+  window.toast=function(msg,kind){kind=kind||"good";
+    const el=document.createElement("div");el.className="toast "+kind;el.innerHTML=TICONS[kind]+"<span></span>";
+    el.querySelector("span").textContent=msg;toastWrap.appendChild(el);
+    requestAnimationFrame(()=>el.classList.add("show"));
+    setTimeout(()=>{el.classList.remove("show");setTimeout(()=>el.remove(),250);},2600);};
+
+  /* ---------------- theme toggle ---------------- */
+  const themeBtn=$("#themeToggle"),themeMeta=document.querySelector('meta[name="theme-color"]');
+  themeBtn&&themeBtn.addEventListener("click",()=>{
+    const cur=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";
+    document.documentElement.setAttribute("data-theme",cur);
+    try{localStorage.setItem("exactly-theme",cur);}catch(e){}
+    if(themeMeta)themeMeta.setAttribute("content",cur==="dark"?"#1a1714":"#f5f1e8");
+  });
 
   /* ---------------- tab switching ---------------- */
   const HERO={
@@ -368,13 +505,20 @@
     convert:["Convert data files <em>instantly</em>, in your browser.","JSON, YAML, XML and CSV in any direction. Paste or upload — nothing is sent to a server."]
   };
   const heroTitle=$("#heroTitle"),heroSub=$("#heroSub");
-  document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
-    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  const TABS=["compress","passport","convert"];
+  function activateTab(name,updateHash){
+    if(!TABS.includes(name))name="compress";
+    document.querySelectorAll(".tab").forEach(x=>{const on=x.dataset.tab===name;
+      x.classList.toggle("active",on);x.setAttribute("aria-selected",on?"true":"false");});
     document.querySelectorAll(".pane").forEach(x=>x.classList.remove("active"));
-    t.classList.add("active");
-    $("#pane-"+t.dataset.tab).classList.add("active");
-    const h=HERO[t.dataset.tab];if(h){heroTitle.innerHTML=h[0];heroSub.textContent=h[1];}
-  }));
+    $("#pane-"+name).classList.add("active");
+    const h=HERO[name];if(h){heroTitle.innerHTML=h[0];heroSub.textContent=h[1];}
+    if(updateHash&&location.hash.slice(1)!==name){history.replaceState(null,"","#"+name);}
+  }
+  document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>activateTab(t.dataset.tab,true)));
+  // deep-link: open the tab named in the URL hash, and react to back/forward
+  activateTab(location.hash.slice(1)||"compress",false);
+  window.addEventListener("hashchange",()=>activateTab(location.hash.slice(1)||"compress",false));
 
   /* ====================================================================
      SHARED: compress a canvas/image to a target byte size via quality search
@@ -455,9 +599,10 @@
     summary.innerHTML=done.length?`${done.length} image${done.length>1?"s":""} ready · ${fmtBytes(o)} → ${fmtBytes(n)} · <b>saved ${Math.max(0,Math.round((1-n/o)*100))}%</b>`:(items.length?"Working…":"");
     $("#zipBtn").disabled=done.length<1;}
   async function downloadZip(){const done=items.filter(i=>i.status==="done");if(!done.length)return;
-    if(done.length===1){const a=document.createElement("a");a.href=done[0].url;a.download=outName(done[0]);a.click();return;}
+    if(done.length===1){const a=document.createElement("a");a.href=done[0].url;a.download=outName(done[0]);a.click();toast("Image downloaded");return;}
     const zip=new JSZip();done.forEach(it=>zip.file(outName(it),it.blob));const blob=await zip.generateAsync({type:"blob"});
-    const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="compressed-images.zip";a.click();setTimeout(()=>URL.revokeObjectURL(url),4000);}
+    const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="compressed-images.zip";a.click();setTimeout(()=>URL.revokeObjectURL(url),4000);
+    toast(done.length+" images downloaded as ZIP");}
 
   /* ====================================================================
      TOOL 2 — PASSPORT / VISA PHOTO
@@ -740,11 +885,12 @@
     const r=new FileReader();r.onload=()=>{convIn.value=r.result;
       const ext=(f.name.split(".").pop()||"").toLowerCase();const map={json:"json",yaml:"yaml",yml:"yaml",xml:"xml",csv:"csv"};
       if(map[ext])fromFmt.value=map[ext];runConvert();};r.readAsText(f);});
-  $("#convCopy").addEventListener("click",()=>{if(!convOut.value)return;navigator.clipboard&&navigator.clipboard.writeText(convOut.value);
-    const b=$("#convCopy");const o=b.textContent;b.textContent="Copied!";setTimeout(()=>b.textContent=o,1200);});
-  $("#convDownload").addEventListener("click",()=>{if(!convOut.value)return;
+  $("#convCopy").addEventListener("click",()=>{if(!convOut.value){toast("Nothing to copy yet","bad");return;}navigator.clipboard&&navigator.clipboard.writeText(convOut.value);
+    const b=$("#convCopy");const o=b.textContent;b.textContent="Copied!";setTimeout(()=>b.textContent=o,1200);toast("Copied to clipboard");});
+  $("#convDownload").addEventListener("click",()=>{if(!convOut.value){toast("Nothing to download yet","bad");return;}
     const blob=new Blob([convOut.value],{type:"text/plain"});const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");a.href=url;a.download="converted."+(EXT[toFmt.value]||"txt");a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);});
+    const name="converted."+(EXT[toFmt.value]||"txt");
+    const a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);toast("Downloaded "+name);});
   $("#convSample").addEventListener("click",()=>{
     fromFmt.value="json";toFmt.value="yaml";
     convIn.value=JSON.stringify({service:"payments",version:2,enabled:true,replicas:3,
